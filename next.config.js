@@ -13,12 +13,17 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'imageproxy.wolt.com',
+        pathname: '**',
       },
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
+        pathname: '**',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [420, 640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

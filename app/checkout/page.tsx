@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import {
   ShoppingBag,
@@ -196,7 +197,7 @@ function CheckoutPage() {
                 <li key={it.name} className="flex items-center gap-3 rounded-2xl glass p-3">
                   <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-white">
                     {it.image ? (
-                      <img src={it.image} alt={it.name} className="h-full w-full object-contain p-1" />
+                      <Image src={it.image} alt={it.name} width={56} height={56} className="h-full w-full object-contain p-1" />
                     ) : (
                       <ShoppingBag className="h-5 w-5 text-black/40" />
                     )}

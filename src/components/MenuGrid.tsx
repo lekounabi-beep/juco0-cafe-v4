@@ -4,6 +4,7 @@ import { menu, type MenuItem } from "@/data/menu";
 import { productImages } from "@/data/productImages";
 import { useCart } from "@/lib/cart-store";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 
 // Category-based fallback photos (Unsplash CDN, stable IDs).
@@ -90,15 +91,21 @@ function Card({ item, i }: { item: MenuItem; i: number }) {
     >
       <div className={`relative aspect-[4/3] overflow-hidden ${productPhoto ? "bg-white" : "bg-black/40"}`}>
         {!imageError ? (
-          <motion.img
-            src={src}
-            alt={item.name}
-            loading="lazy"
-            onError={handleImageError}
-            className={`h-full w-full will-change-transform ${productPhoto ? "object-contain p-2" : "object-cover"}`}
+          <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 0.3 }}
-          />
+            className="h-full w-full"
+          >
+            <Image
+              src={src}
+              alt={item.name}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              loading="lazy"
+              onError={handleImageError}
+              className={`will-change-transform ${productPhoto ? "object-contain p-2" : "object-cover"}`}
+            />
+          </motion.div>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-black/40">
             <ShoppingBag className="h-12 w-12 text-white/30" />
