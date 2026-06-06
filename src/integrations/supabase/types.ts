@@ -64,6 +64,7 @@ export type Database = {
           subtotal: number
           total: number
           updated_at: string
+          viva_transaction_id: string | null
         }
         Insert: {
           address: string
@@ -84,6 +85,7 @@ export type Database = {
           subtotal: number
           total: number
           updated_at?: string
+          viva_transaction_id?: string | null
         }
         Update: {
           address?: string
@@ -104,6 +106,7 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
+          viva_transaction_id?: string | null
         }
         Relationships: []
       }

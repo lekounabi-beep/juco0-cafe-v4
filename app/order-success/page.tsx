@@ -43,60 +43,87 @@ function OrderSuccessContent() {
   useEffect(() => {
     async function processOrder() {
       try {
+        console.log('Order success page - processing order');
+        console.log('Transaction ID (t):', t);
+        console.log('Order ID (id):', id);
+
         // Handle Viva Wallet callback
         if (t) {
-          // Verify transaction with Viva Wallet
-          const isVerified = await verifyVivaTransaction(t);
-          
-          if (!isVerified) {
-            setError("Η πληρωμή δεν επιβεβαιώθηκε. Παρακαλώ επικοινωνήστε μαζί μας.");
-            setLoading(false);
-            return;
-          }
+          console.log('Processing Viva Wallet callback');
 
           // Retrieve pending order from sessionStorage
           const pendingOrderStr = sessionStorage.getItem("pendingOrder");
+          console.log('Pending order from sessionStorage:', pendingOrderStr ? 'Found' : 'Not found');
+          
           if (!pendingOrderStr) {
+            console.error('No pending order found in sessionStorage');
             setError("Δεν βρέθηκε η παραγγελία. Παρακαλώ ξεκινήστε ξανά.");
             setLoading(false);
             return;
           }
 
           const pendingOrder = JSON.parse(pendingOrderStr);
+          console.log('Pending order data:', pendingOrder);
           
-          // Update payment status and save to database
-          const orderPayload = {
-            ...pendingOrder,
-            payment_status: "paid",
-            payment_method: "card",
-            viva_transaction_id: t,
-            status: "pending",
-          };
+          // Try to save to database
+          try {
+            const orderPayload = {
+              ...pendingOrder,
+              payment_status: "paid",
+              payment_method: "card",
+              viva_transaction_id: t,
+              status: "pending",
+            };
 
-          const { data, error: insertError } = await supabase
-            .from("orders")
-            .insert(orderPayload)
-            .select("id, order_number")
-            .single();
+            console.log('Attempting to insert order to Supabase:', orderPayload);
 
-          if (insertError) throw insertError;
+            const { data, error: insertError } = await supabase
+              .from("orders")
+              .insert(orderPayload)
+              .select("id, order_number")
+              .single();
 
-          // Clear sessionStorage
-          sessionStorage.removeItem("pendingOrder");
+            if (insertError) {
+              console.error('Supabase insert error:', insertError);
+              console.error('Error details:', JSON.stringify(insertError, null, 2));
+              setError(`Σφάλμα βάσης δεδομένων: ${insertError.message}`);
+              setLoading(false);
+              return;
+            }
 
-          setOrder((data as unknown as Order) ?? null);
-          setLoading(false);
-          return;
+            console.log('Order successfully inserted to Supabase:', data);
+
+            // Clear sessionStorage
+            sessionStorage.removeItem("pendingOrder");
+
+            // Use the pending order data for display (includes items, etc.)
+            setOrder({ ...pendingOrder, id: data.id, order_number: data.order_number } as Order);
+            setLoading(false);
+            return;
+          } catch (dbError) {
+            console.error('Database error:', dbError);
+            setError(`Σφάλμα βάσης δεδομένων: ${dbError instanceof Error ? dbError.message : 'Άγνωστο σφάλμα'}`);
+            setLoading(false);
+            return;
+          }
         }
 
         // Handle regular order success (cash on delivery)
         if (!id) {
+          console.log('No transaction ID or order ID provided');
           setLoading(false);
           return;
         }
 
-        const { data } = await supabase.from("orders").select("*").eq("id", id).single();
-        setOrder((data as unknown as Order) ?? null);
+        console.log('Fetching order by ID:', id);
+        try {
+          const { data } = await supabase.from("orders").select("*").eq("id", id).single();
+          console.log('Order fetched:', data);
+          setOrder((data as unknown as Order) ?? null);
+        } catch (supabaseError) {
+          console.error('Supabase fetch error:', supabaseError);
+          setError('Δεν ήταν δυνατή η ανάκτηση της παραγγελίας.');
+        }
         setLoading(false);
       } catch (e) {
         console.error("Order processing error:", e);

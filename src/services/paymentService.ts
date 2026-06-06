@@ -67,8 +67,9 @@ export async function createVivaOrderCode(
  * Redirects to Viva Wallet payment page
  */
 export function redirectToVivaPayment(orderCode: string): void {
-  // Use the demo payment page URL for Smart Checkout v2
-  const paymentUrl = `https://demo.vivapayments.com/web/checkout?ref=${orderCode}`;
+  // Use the payment page URL from environment variable or fallback to demo
+  const vivaWebBaseUrl = process.env.NEXT_PUBLIC_VIVA_WEB_BASE_URL || 'https://demo.vivapayments.com';
+  const paymentUrl = `${vivaWebBaseUrl}/web/checkout?ref=${orderCode}`;
   console.log('Redirecting to Viva Wallet:', paymentUrl);
   window.location.href = paymentUrl;
 }
@@ -78,9 +79,9 @@ export function redirectToVivaPayment(orderCode: string): void {
  * This should be called on the server-side for security
  */
 export async function verifyVivaTransaction(transactionId: string): Promise<boolean> {
-  const VIVA_API_KEY = import.meta.env.VITE_VIVA_API_KEY || '';
-  const VIVA_MERCHANT_ID = import.meta.env.VITE_VIVA_MERCHANT_ID || '';
-  const VIVA_DEMO_URL = import.meta.env.VITE_VIVA_DEMO_URL || 'https://demo.vivapayments.com';
+  const VIVA_API_KEY = process.env.VIVA_CLIENT_SECRET || '';
+  const VIVA_MERCHANT_ID = process.env.VIVA_CLIENT_ID || '';
+  const VIVA_API_BASE_URL = process.env.VIVA_API_BASE_URL || 'https://demo-api.vivapayments.com';
 
   if (!VIVA_API_KEY || !VIVA_MERCHANT_ID) {
     console.warn('Viva Wallet credentials not configured. Skipping verification.');
@@ -88,7 +89,7 @@ export async function verifyVivaTransaction(transactionId: string): Promise<bool
   }
 
   try {
-    const apiUrl = `${VIVA_DEMO_URL}/api/transactions/${transactionId}`;
+    const apiUrl = `${VIVA_API_BASE_URL}/api/transactions/${transactionId}`;
     
     const response = await fetch(apiUrl, {
       method: 'GET',

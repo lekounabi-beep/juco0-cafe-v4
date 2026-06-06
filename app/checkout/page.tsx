@@ -83,12 +83,17 @@ function CheckoutPage() {
     try {
       // For card payment, use Viva Wallet Native Smart Checkout
       if (payment === "card") {
-        // Create Viva Wallet order code
-        const vivaResponse = await createVivaOrderCode(total, {
-          email: undefined,
-          fullName: name.trim(),
-          phone: phone.trim(),
-        });
+        // Create Viva Wallet order code with timeout
+        const vivaResponse = await Promise.race([
+          createVivaOrderCode(total, {
+            email: undefined,
+            fullName: name.trim(),
+            phone: phone.trim(),
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Viva Wallet API timeout")), 15000)
+          )
+        ]) as any;
 
         console.log('Viva Wallet response:', vivaResponse);
 
@@ -96,12 +101,6 @@ function CheckoutPage() {
           throw new Error(vivaResponse.errorText || "Failed to create Viva Wallet order");
         }
 
-        // Store order data in sessionStorage for retrieval after payment
-        // Redirect to Viva Wallet payment page
-        console.log('Redirecting to Viva Wallet with order code:', vivaResponse.orderCode);
-        console.log('Order code type:', typeof vivaResponse.orderCode);
-        console.log('Order code length:', vivaResponse.orderCode.length);
-        
         // Store order data in sessionStorage for retrieval after payment
         const orderPayload = {
           items: items.map((i: any) => ({ name: i.name, price: i.price, qty: i.qty, category: i.category })),
@@ -147,16 +146,27 @@ function CheckoutPage() {
         status: "pending",
       };
 
-      const { data, error: insErr } = await supabase
-        .from("orders")
-        .insert(payload)
-        .select("id, order_number")
-        .single();
+      // Add timeout to Supabase insert
+      const { data, error: insErr } = await Promise.race([
+        supabase
+          .from("orders")
+          .insert(payload)
+          .select("id, order_number")
+          .single(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Database timeout - please check your connection")), 10000)
+        )
+      ]) as any;
 
-      if (insErr) throw insErr;
+      if (insErr) {
+        console.error('Supabase insert error:', insErr);
+        throw new Error(`Database error: ${insErr.message || 'Failed to save order'}`);
+      }
+
       clear();
       router.push(`/order-success?id=${(data as { id: string }).id}`);
     } catch (e) {
+      console.error('Order submission error:', e);
       const msg = e instanceof Error ? e.message : "Κάτι πήγε στραβά. Δοκίμασε ξανά.";
       setError(msg);
       setSubmitting(false);

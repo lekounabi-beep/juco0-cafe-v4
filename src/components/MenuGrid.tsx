@@ -3,6 +3,7 @@ import { Plus, Minus, ShoppingBag } from "lucide-react";
 import { menu, type MenuItem } from "@/data/menu";
 import { productImages } from "@/data/productImages";
 import { useCart } from "@/lib/cart-store";
+import { motion, AnimatePresence } from "framer-motion";
 
 
 // Category-based fallback photos (Unsplash CDN, stable IDs).
@@ -61,6 +62,7 @@ function Card({ item, i }: { item: MenuItem; i: number }) {
   const initial = item.image || productPhoto || fallback;
   const [src, setSrc] = useState<string>(initial);
   const [triedFallback, setTriedFallback] = useState(initial !== item.image);
+  const [imageError, setImageError] = useState(false);
 
   const qty = useCart((s) => s.items.find((it) => it.name === item.name)?.qty ?? 0);
   const add = useCart((s) => s.add);
@@ -69,24 +71,39 @@ function Card({ item, i }: { item: MenuItem; i: number }) {
   const disabled = item.price <= 0;
   const cartImage = productPhoto || (item.image && !item.image.includes("wolt.com") ? item.image : undefined);
 
+  const handleImageError = () => {
+    if (!triedFallback) {
+      setTriedFallback(true);
+      setSrc(productPhoto || fallback);
+    } else {
+      setImageError(true);
+    }
+  };
+
   return (
-    <article
-      className="group flex flex-col overflow-hidden rounded-2xl glass shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] animate-fade-up"
-      style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}
+    <motion.article
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: Math.min(i, 12) * 0.04, ease: [0.25, 0.1, 0.25, 1] }}
+      className="group flex flex-col overflow-hidden rounded-2xl glass shadow-[var(--shadow-soft)] will-change-transform"
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
       <div className={`relative aspect-[4/3] overflow-hidden ${productPhoto ? "bg-white" : "bg-black/40"}`}>
-        <img
-          src={src}
-          alt={item.name}
-          loading="lazy"
-          onError={() => {
-            if (!triedFallback) {
-              setTriedFallback(true);
-              setSrc(productPhoto || fallback);
-            }
-          }}
-          className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${productPhoto ? "object-contain p-2" : "object-cover"}`}
-        />
+        {!imageError ? (
+          <motion.img
+            src={src}
+            alt={item.name}
+            loading="lazy"
+            onError={handleImageError}
+            className={`h-full w-full will-change-transform ${productPhoto ? "object-contain p-2" : "object-cover"}`}
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.3 }}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-black/40">
+            <ShoppingBag className="h-12 w-12 text-white/30" />
+          </div>
+        )}
         <div className="absolute top-3 right-3 rounded-full bg-primary px-3 py-1 text-sm font-bold text-primary-foreground shadow-lg">
           {formatPrice(item.price)}
         </div>
@@ -98,28 +115,49 @@ function Card({ item, i }: { item: MenuItem; i: number }) {
         )}
         <div className="mt-4">
           {qty === 0 ? (
-            <button
+            <motion.button
               type="button"
               disabled={disabled}
               onClick={() => add({ name: item.name, price: item.price, image: cartImage, category: item.category })}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform hover:-translate-y-0.5 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] disabled:cursor-not-allowed disabled:opacity-50 will-change-transform"
             >
               <ShoppingBag className="h-4 w-4" /> Προσθήκη
-            </button>
+            </motion.button>
           ) : (
             <div className="flex items-center justify-between gap-2 rounded-xl bg-primary/15 px-2 py-1.5">
-              <button type="button" onClick={() => setQty(item.name, qty - 1)} className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90" aria-label="Μείωση">
+              <motion.button 
+                type="button" 
+                onClick={() => setQty(item.name, qty - 1)} 
+                whileTap={{ scale: 0.9 }}
+                className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 will-change-transform" 
+                aria-label="Μείωση"
+              >
                 <Minus className="h-4 w-4" />
-              </button>
-              <span className="font-semibold text-white">{qty}</span>
-              <button type="button" onClick={() => add({ name: item.name, price: item.price, image: cartImage, category: item.category })} className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90" aria-label="Προσθήκη">
+              </motion.button>
+              <motion.span 
+                key={qty}
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
+                className="font-semibold text-white"
+              >
+                {qty}
+              </motion.span>
+              <motion.button 
+                type="button" 
+                onClick={() => add({ name: item.name, price: item.price, image: cartImage, category: item.category })} 
+                whileTap={{ scale: 0.9 }}
+                className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 will-change-transform" 
+                aria-label="Προσθήκη"
+              >
                 <Plus className="h-4 w-4" />
-              </button>
+              </motion.button>
             </div>
           )}
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
@@ -142,29 +180,39 @@ export function MenuGrid() {
         <h2 className="mt-2 text-3xl sm:text-5xl font-semibold text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.5)]">Made fresh, every day</h2>
       </div>
 
-      {/* Category pills */}
-      <div className="sticky top-[57px] z-20 -mx-4 mb-10 overflow-x-auto bg-black/40 px-4 py-3 backdrop-blur-md border-y border-white/10">
+      {/* Category pills - Mobile scroll isolation */}
+      <div className="sticky top-[57px] z-20 -mx-4 mb-10 overflow-x-auto bg-black/40 px-4 py-3 backdrop-blur-md border-y border-white/10 will-change-transform touch-pan-x">
         <div className="flex gap-2 whitespace-nowrap">
           {grouped.map(([cat]) => (
-            <a
+            <motion.a
               key={cat}
               href={`#cat-${encodeURIComponent(cat)}`}
               onClick={() => setActive(cat)}
-              className={`rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition will-change-transform ${
                 active === cat
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-white/15 bg-white/5 text-white/70 hover:text-white hover:bg-white/10"
               }`}
             >
               {cat}
-            </a>
+            </motion.a>
           ))}
         </div>
       </div>
 
       <div className="space-y-16">
         {grouped.map(([cat, items]) => (
-          <div key={cat} id={`cat-${encodeURIComponent(cat)}`} className="scroll-mt-24">
+          <motion.div 
+            key={cat} 
+            id={`cat-${encodeURIComponent(cat)}`} 
+            className="scroll-mt-24"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.4 }}
+          >
             <div className="mb-6 flex items-end justify-between gap-4">
               <h3 className="text-xl sm:text-2xl font-semibold text-white">{cat}</h3>
               <div className="h-px flex-1 bg-white/15" />
@@ -175,7 +223,7 @@ export function MenuGrid() {
                 <Card key={it.name + i} item={it} i={i} />
               ))}
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     </section>

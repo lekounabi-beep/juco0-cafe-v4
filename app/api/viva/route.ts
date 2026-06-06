@@ -8,8 +8,18 @@ export async function POST(request: NextRequest) {
     const VIVA_CLIENT_ID = process.env.VIVA_CLIENT_ID || '';
     const VIVA_CLIENT_SECRET = process.env.VIVA_CLIENT_SECRET || '';
     const VIVA_SOURCE_CODE = process.env.VIVA_SOURCE_CODE || '';
-    const VIVA_API_URL = process.env.VIVA_API_URL || 'https://demo-api.vivapayments.com/checkout/v2/orders';
-    const VIVA_TOKEN_URL = process.env.VIVA_TOKEN_URL || 'https://demo-accounts.vivapayments.com/connect/token';
+    const VIVA_API_BASE_URL = process.env.VIVA_API_BASE_URL || 'https://demo-api.vivapayments.com';
+    const VIVA_ACCOUNTS_BASE_URL = process.env.VIVA_ACCOUNTS_BASE_URL || 'https://demo-accounts.vivapayments.com';
+    const VIVA_WEB_BASE_URL = process.env.VIVA_WEB_BASE_URL || 'https://demo.vivapayments.com';
+
+    const VIVA_API_URL = `${VIVA_API_BASE_URL}/checkout/v2/orders`;
+    const VIVA_TOKEN_URL = `${VIVA_ACCOUNTS_BASE_URL}/connect/token`;
+
+    // Dynamic base URL from request header or environment variable
+    const protocol = request.headers.get('x-forwarded-proto') || 'https';
+    const host = request.headers.get('host') || process.env.NEXT_PUBLIC_BASE_URL?.replace(/^https?:\/\//, '') || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`;
+    const VIVA_REDIRECT_URL = process.env.VIVA_REDIRECT_URL || `${baseUrl}/order-success`;
 
     console.log('Server: Viva Wallet OAuth 2.0 Credentials Check:');
     console.log('  Client ID:', VIVA_CLIENT_ID ? 'Present' : 'Missing');
@@ -17,6 +27,7 @@ export async function POST(request: NextRequest) {
     console.log('  Source Code:', VIVA_SOURCE_CODE);
     console.log('  Token URL:', VIVA_TOKEN_URL);
     console.log('  API URL:', VIVA_API_URL);
+    console.log('  Redirect URL:', VIVA_REDIRECT_URL);
 
     if (!VIVA_CLIENT_ID || !VIVA_CLIENT_SECRET) {
       console.warn('Viva Wallet OAuth credentials not configured. Using demo mode.');
@@ -66,6 +77,7 @@ export async function POST(request: NextRequest) {
 
     // STEP 2: Create Payment Order using Bearer token
     console.log('Server: Step 2 - Creating payment order at:', VIVA_API_URL);
+    console.log('Server: Order body redirectUrl:', VIVA_REDIRECT_URL);
 
     const orderBody = {
       amount: amount * 100,
@@ -82,7 +94,10 @@ export async function POST(request: NextRequest) {
       disableWallet: false,
       tipAmount: 0,
       disableVivaWallet: false,
+      redirectUrl: VIVA_REDIRECT_URL,
     };
+
+    console.log('Server: Full order body:', JSON.stringify(orderBody, null, 2));
 
     const orderResponse = await fetch(VIVA_API_URL, {
       method: 'POST',
@@ -116,6 +131,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log('Server: Order code received:', orderCode);
+    console.log('Server: Checkout URL:', `${VIVA_WEB_BASE_URL}/web/checkout?ref=${orderCode}`);
 
     return NextResponse.json({ orderCode });
   } catch (error) {
